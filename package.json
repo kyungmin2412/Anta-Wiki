@@ -13,7 +13,8 @@
     "shots": "node scripts/dev/shoot.mjs",
     "contract": "tsx --conditions=react-server scripts/contract.mjs",
     "import": "tsx --conditions=react-server scripts/import.mjs",
-    "synthesis-input": "tsx --conditions=react-server scripts/synthesis-input.mjs"
+    "synthesis-input": "tsx --conditions=react-server scripts/synthesis-input.mjs",
+    "status": "tsx --conditions=react-server scripts/status.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
