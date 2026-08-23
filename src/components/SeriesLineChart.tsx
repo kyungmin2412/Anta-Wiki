@@ -1,5 +1,6 @@
 "use client";
 
+import type { TooltipContentProps } from "recharts";
 import {
   CartesianGrid,
   Line,
@@ -30,8 +31,6 @@ type Props = {
   /** 값 축 이름 — 단위는 여기 한 번만 적고 눈금에는 반복하지 않는다. */
   axisLabel?: string;
 };
-
-const AXIS = { stroke: "var(--border)", fontSize: 11 };
 
 export default function SeriesLineChart({
   rows,
@@ -148,12 +147,16 @@ export default function SeriesLineChart({
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--surface-1)" }}
               label={
                 directLabel
-                  ? (p: { index?: number; x?: number; y?: number }) =>
+                  ? (p: {
+                      index?: number;
+                      x?: string | number;
+                      y?: string | number;
+                    }) =>
                       p.index === lastIndexOf.get(key) ? (
                         <text
                           key={`${key}-lbl`}
-                          x={(p.x ?? 0) + 8}
-                          y={(p.y ?? 0) + 4}
+                          x={Number(p.x ?? 0) + 8}
+                          y={Number(p.y ?? 0) + 4}
                           fill={colors[key] ?? "var(--text-muted)"}
                           fontSize={11}
                           fontWeight={600}
@@ -178,10 +181,7 @@ function shorten(key: string): string {
   return m ? `${m[1]}·${m[2].replace(/증권|투자|금융투자/g, "")}` : key;
 }
 
-type TooltipProps = {
-  active?: boolean;
-  label?: string | number;
-  payload?: { dataKey?: string | number; name?: string; value?: number }[];
+type ChartTooltipProps = TooltipContentProps & {
   colors: Record<string, string>;
   formatValue: (v: number) => string;
   consensusLabel: string;
@@ -194,19 +194,22 @@ function ChartTooltip({
   colors,
   formatValue,
   consensusLabel,
-}: TooltipProps) {
+}: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const items = payload
     .filter((p) => typeof p.value === "number")
-    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    .map((p) => ({
+      key: typeof p.dataKey === "string" ? p.dataKey : String(p.name ?? ""),
+      value: p.value as number,
+    }))
+    .sort((a, b) => b.value - a.value);
   if (items.length === 0) return null;
 
   return (
     <div className="rounded-md border border-line bg-surface-1 px-3 py-2 shadow-lg">
       <div className="mb-1.5 text-[11px] font-semibold text-ink-2">{label}</div>
       <div className="space-y-1">
-        {items.map((p) => {
-          const key = String(p.dataKey ?? "");
+        {items.map(({ key, value }) => {
           const isConsensus = key === "consensus";
           return (
             <div key={key} className="flex items-center gap-2 text-[12px]">
@@ -222,7 +225,7 @@ function ChartTooltip({
                 {isConsensus ? consensusLabel : key}
               </span>
               <span className="tnum ml-auto font-semibold text-ink">
-                {formatValue(p.value as number)}
+                {formatValue(value)}
               </span>
             </div>
           );

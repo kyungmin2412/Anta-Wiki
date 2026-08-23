@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ANTA WIKI — 기업분석 위키
 
-## Getting Started
+증권사 리포트를 넣으면 **애널리스트의 논조가 어떻게 변했는지**, **핵심 투자포인트가 어디로 이동했는지**,
+**실적 추정치가 리포트를 거치며 어떻게 조정됐는지**를 기업 단위로 모아 보여주는 위키.
 
-First, run the development server:
+기업이 메인 프레임이고, 그 아래에서 애널리스트별로 추정치 변화가 분해된다.
+
+## 지금 동작하는 것 (리포트 분석 v1)
+
+- **PDF 업로드 → 구조화 추출** — Claude(`claude-opus-5`)가 리포트 PDF를 직접 읽어
+  기업·애널리스트·발간일·투자의견·목표주가·논조 점수·투자포인트·추적 팩터·실적 추정 테이블을 추출
+- **논조 추이** — 투자의견 등급이 아니라 본문 어휘·유보 표현·조정 방향을 근거로 매긴 `-100 ~ +100` 점수의 시계열
+- **목표주가 추이** — 애널리스트별 목표주가 궤적 + 평균
+- **추정치 리비전 탐색기** — (지표 × 결산기)를 골라 애널리스트별 추정치 궤적을 그래프로,
+  컨센서스(각 시점에 살아 있는 최신 추정치의 평균)를 점선으로 겹쳐 표시
+- **애널리스트별 변화표** — 최초/직전/최신 추정치와 변화율, 상향·하향 판정, 논조·목표주가·의견 변화
+- **팩터 추적** — 여러 리포트에서 반복 언급된 관측 지표의 방향이 시간에 따라 어떻게 뒤집혔는지
+- **종합 분석** — 리포트 전체를 가로질러 논조 변곡점, 투자포인트 테마의 부상/지속/약화/소멸,
+  팩터 서술 변화, 의견이 갈리는 쟁점을 해석 (버튼으로 명시 생성, 리포트 추가 시 자동 무효화)
+
+## 실행
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+export ANTHROPIC_API_KEY=...      # 또는 `ant auth login` 프로필
+npm run dev                        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+데모 데이터로 화면만 확인하려면:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+node scripts/seed-demo.mjs --reset   # 삼성전자 · 리포트 8건 · 애널리스트 4명
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+데이터는 `data/anta-wiki.db`(SQLite)와 `data/reports/`(원본 PDF)에 저장되며 git에 올라가지 않는다.
 
-## Learn More
+## 구조
 
-To learn more about Next.js, take a look at the following resources:
+| 경로 | 역할 |
+|---|---|
+| `src/lib/db-schema.ts`, `src/lib/db.ts` | SQLite 스키마와 연결 |
+| `src/lib/schema.ts` | 리포트 추출 / 종합 분석 zod 스키마 (= 모델 출력 계약) |
+| `src/lib/claude.ts` | Claude 호출 (PDF 문서 입력 + structured outputs) |
+| `src/lib/aggregate.ts` | 논조·목표주가·추정치 시계열, 애널리스트별 리비전, 팩터 롤업 |
+| `src/lib/queries.ts` | 저장·조회, 종합 분석 캐시 |
+| `src/components/` | 차트·표·카드 |
+| `src/app/api/` | 업로드/삭제/종합분석 API |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+색은 애널리스트라는 **개체**에 고정 배정된다(등수가 아니라). 어떤 차트에서든 같은 사람은 같은 색이고,
+계열이 9명을 넘으면 새 색을 만들지 않고 표로만 보여준다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 이어서 할 일
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [ ] 라이트/다크 렌더링 육안 확인 — Playwright 스크린샷 스크립트가 아직 안 돌아감
+- [ ] 실제 증권사 리포트 PDF로 추출 품질 검증 (단위 환산, 추정 테이블 파싱, 발간일 인식)
+- [ ] 기업 수동 병합/이름 정정 UI — 같은 기업이 다른 표기로 들어온 경우
+- [ ] 분기 추정치 화면 (스키마·추출은 이미 지원, 탐색기 기본 노출은 연간 위주)
+- [ ] 이후 위키 기능: 재무제표, 산업 분석, 경쟁사 비교

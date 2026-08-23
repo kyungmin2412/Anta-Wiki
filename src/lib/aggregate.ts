@@ -200,6 +200,7 @@ export type AnalystRevision = {
   firstDate: string;
   latestDate: string;
   latestTitle: string;
+  latestReportId: number;
   firstTone: number | null;
   latestTone: number | null;
   toneDelta: number | null;
@@ -291,6 +292,7 @@ export function buildAnalystRevisions(
       firstDate: first.published_at,
       latestDate: last.published_at,
       latestTitle: last.title,
+      latestReportId: last.id,
       firstTone: first.tone_score,
       latestTone: last.tone_score,
       toneDelta:

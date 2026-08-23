@@ -52,3 +52,8 @@ export function fmtPrice(v: number | null | undefined, currency: string): string
   if (currency === "USD") return `$${fmtNumber(v, 2)}`;
   return `${fmtNumber(v)} ${currency}`;
 }
+
+export function pctChange(from: number, to: number): number | null {
+  if (from === 0) return null;
+  return Math.round(((to - from) / Math.abs(from)) * 1000) / 10;
+}
