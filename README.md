@@ -66,6 +66,9 @@ npm run ingest -- ./리포트폴더             # 폴더째 일괄 분석
 
 ## 실행
 
+터미널이 낯설다면 **[처음 시작하기](처음%20시작하기.md)** 를 보세요.
+`위키 실행하기.command`(맥) / `위키 실행하기.bat`(윈도우)을 두 번 누르면 켜집니다.
+
 ```bash
 npm install
 npm run dev                        # http://localhost:3000
