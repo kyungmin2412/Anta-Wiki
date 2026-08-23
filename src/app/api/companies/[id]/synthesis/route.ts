@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AnalysisError, MODEL, synthesizeCompany } from "@/lib/claude";
+import { AnalysisError, currentModel, synthesizeCompany } from "@/lib/ai";
 import { buildSynthesisInput } from "@/lib/synthesis-input";
 import {
   getCompany,
@@ -35,7 +35,7 @@ export async function POST(
     const payload = await synthesizeCompany(
       buildSynthesisInput(company.name, reports),
     );
-    saveSynthesis(companyId, synthesisInputHash(reports), payload, MODEL);
+    saveSynthesis(companyId, synthesisInputHash(reports), payload, currentModel());
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message =

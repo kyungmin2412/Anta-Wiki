@@ -23,54 +23,28 @@
 PDF를 읽고 논조를 판단하는 일에는 AI 모델이 필요하다. 그 외 — 차트, 시계열 집계,
 애널리스트별 리비전, 컨센서스 계산 — 은 전부 로컬 코드라 모델과 무관하다.
 
-| | Claude Code 경로 | API 경로 |
+**엔진은 Claude와 GPT 중 골라 쓸 수 있다.** `src/lib/ai.ts` 가 그 뒤에서 어느 쪽을 부를지
+정한다 — `AI_PROVIDER=anthropic|openai` 로 명시하거나, 비워두면 실제로 쓸 수 있는 자격
+증명이 있는 쪽을 자동으로 고른다(둘 다 있으면 anthropic 기본값, 기존 설치 동작을 유지하기
+위해서다). 두 엔진 모두 `src/lib/schema.ts`·`src/lib/prompts.ts`를 그대로 공유하므로
+**결과 품질은 동일**하다.
+
+| | 구독으로 넣기 (추가 결제 없음) | API 키로 넣기 (종량제) |
 |---|---|---|
-| 추가 결제 | **없음** (구독에 포함) | 리포트당 약 $0.35 |
-| 구독 사용량 | 많이 쓴다 (아래 참고) | 쓰지 않는다 |
-| 필요한 것 | Claude Code 로그인 | `ANTHROPIC_API_KEY` |
-| 넣는 방법 | `리포트 넣기` 더블클릭 | 브라우저 `/upload`에 드래그 |
-| 자동화 | 사람이 세션을 열어야 함 | 스크립트로 무인 실행 가능 |
+| Claude | `리포트 넣기.bat` / `.command` | `AI_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` |
+| GPT | `리포트 넣기 (Codex).bat` / `.command` | `AI_PROVIDER=openai` + `OPENAI_API_KEY` |
+| 필요한 것 | 해당 구독 로그인 | 콘솔에서 발급한 API 키 |
+| 넣는 방법 | 더블클릭 → 채팅으로 요청 | 브라우저 `/upload`에 드래그, 또는 `npm run ingest` |
 
-같은 지침과 같은 스키마를 쓰므로 **결과 품질은 동일하다.** 차이는 요금 청구 방식과 효율이다.
+**토큰/사용량 효율은 API 키 쪽이 압도적으로 낫다.** Claude Code나 Codex 같은 에이전트형
+CLI는 대화가 누적되므로, 리포트 3건을 한 세션에서 처리하면 3번째 작업에도 앞의 2건이
+계속 실려 간다 — 비용(정확히는 구독 사용량)이 리포트 수의 제곱으로 는다. API 키 경로는
+리포트 1건 = 요청 1번이라 누적이 없고, 리포트당 대략 $0.1~0.4 수준이다(모델·리포트
+길이에 따라 다름). 그래서 두 스킬(`.claude/skills/report-ingest`, `.agents/skills/report-ingest`)은
+**리포트마다 서브에이전트를 띄우고, 필요한 페이지만 읽도록** 지시한다. 그래도 리포트를
+정기적으로 많이 넣는다면 API 키 경로가 유리하다.
 
-**토큰 효율은 API 경로가 압도적으로 낫다.** Claude Code는 대화가 누적되므로 리포트 3건을
-한 세션에서 처리하면 3번째 작업에도 앞의 2건이 계속 실려 간다 — 비용이 리포트 수의 제곱으로 는다.
-API 경로는 리포트 1건 = 요청 1번이라 누적이 없다.
-
-그래서 스킬(`.claude/skills/report-ingest`)은 **리포트마다 서브에이전트를 띄우고, 필요한 페이지만
-읽도록** 지시한다. 그래도 리포트를 정기적으로 많이 넣는다면 API 경로가 사용량 면에서 유리하다.
-
-### Claude Code 경로 (추가 비용 없음)
-
-프로젝트 폴더에서 Claude Code를 열고 리포트를 넣어달라고 하면 된다.
-`.claude/skills/report-ingest`가 PDF 읽기 → 검증 → 적재까지의 절차를 담고 있다.
-
-```
-> ./reports 폴더의 증권사 리포트들을 위키에 넣어줘
-> 삼성전자 종합 분석 만들어줘
-```
-
-내부적으로는 이 명령들을 쓴다. 손으로 돌려도 된다:
-
-```bash
-npm run contract                          # 추출 지침 + JSON 스키마 (코드에서 생성됨)
-npm run import -- ext.json --pdf r.pdf    # 추출 결과 검증 후 적재
-npm run synthesis-input -- 1              # 종합 분석에 넣을 입력 데이터
-npm run import -- synth.json --synthesis 1
-```
-
-`import`는 zod로 검증하므로 스키마에 어긋나면 **어느 필드가 왜 틀렸는지 찍고 아무것도 저장하지 않는다.**
-
-### API 경로 (종량제)
-
-```bash
-export ANTHROPIC_API_KEY=...
-npm run dev                               # /upload 에 PDF 드래그
-npm run ingest -- ./리포트폴더             # 폴더째 일괄 분석
-```
-
-키가 없으면 PDF를 읽기 전에 안내 메시지로 막힌다. 비용이 부담되면 `ANTA_MODEL=claude-sonnet-5`로
-낮출 수 있으나, 논조 판정은 Opus가 확실히 낫다.
+`.env.local.example` 을 `.env.local` 로 복사해 키를 채우면 된다.
 
 ## 실행
 
@@ -103,9 +77,13 @@ npm run lint
 |---|---|
 | `src/lib/db-schema.ts`, `src/lib/db.ts` | SQLite 스키마와 연결 (Node 내장 `node:sqlite` — 네이티브 빌드 없음) |
 | `src/lib/schema.ts` | 리포트 추출 / 종합 분석 zod 스키마 (= 모델 출력 계약) |
-| `src/lib/prompts.ts` | 추출·종합 지침 — 두 경로가 공유하는 단일 출처 |
-| `src/lib/claude.ts` | API 경로의 Claude 호출 (PDF 문서 입력 + structured outputs) |
-| `.claude/skills/report-ingest/` | Claude Code 경로의 절차 |
+| `src/lib/prompts.ts` | 추출·종합 지침 — 두 엔진이 공유하는 단일 출처 |
+| `src/lib/schema.ts` | 추출/종합 결과의 zod 스키마 — 두 엔진이 공유 |
+| `src/lib/ai.ts` | 엔진 선택 지점 (`AI_PROVIDER`) — 나머지 코드는 이 모듈만 참조 |
+| `src/lib/claude.ts` | Claude(Anthropic) 호출 |
+| `src/lib/openai.ts` | GPT(OpenAI) 호출 — `src/lib/json-schema-strict.ts`로 zod 스키마를 strict mode용으로 정규화 |
+| `.claude/skills/report-ingest/` | Claude Code 구독 경로의 절차 |
+| `.agents/skills/report-ingest/`, `AGENTS.md` | Codex 구독 경로의 절차 |
 | `src/lib/aggregate.ts` | 논조·목표주가·추정치 시계열, 애널리스트별 리비전, 팩터 롤업 |
 | `src/lib/queries.ts` | 저장·조회, 종합 분석 캐시 |
 | `src/components/` | 차트·표·카드 |

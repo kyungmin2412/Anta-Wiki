@@ -36,7 +36,7 @@ if (dryRun) {
   process.exit(0);
 }
 
-const { MODEL, credentialsAvailable, extractReport } = await import("../src/lib/claude.ts");
+const { credentialsAvailable, currentModel, extractReport } = await import("../src/lib/ai.ts");
 const { sanitizeExtraction } = await import("../src/lib/normalize.ts");
 const { REPORT_FILE_DIR } = await import("../src/lib/db.ts");
 const { findReportByHash, saveExtraction } = await import("../src/lib/queries.ts");
@@ -68,7 +68,7 @@ for (const [i, file] of entries.entries()) {
     const storedFile = `${hash.slice(0, 16)}.pdf`;
     await fs.mkdir(REPORT_FILE_DIR, { recursive: true });
     await fs.writeFile(path.join(REPORT_FILE_DIR, storedFile), buf);
-    saveExtraction(value, { fileName: name, fileHash: hash, storedFile, model: MODEL });
+    saveExtraction(value, { fileName: name, fileHash: hash, storedFile, model: currentModel() });
 
     console.log(
       `${value.company_name} · ${value.analyst_name}(${value.brokerage}) · ${value.published_at} · ` +

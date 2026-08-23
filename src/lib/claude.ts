@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { AnalysisError } from "./ai-error";
 import { EXTRACT_SYSTEM, SYNTH_SYSTEM } from "./prompts";
 import {
   ReportExtractionSchema,
@@ -12,7 +13,7 @@ import {
 
 export const MODEL = process.env.ANTA_MODEL ?? "claude-opus-5";
 
-export class AnalysisError extends Error {}
+export { AnalysisError };
 
 export const NO_CREDENTIALS =
   "Claude API 자격 증명이 없습니다. ANTHROPIC_API_KEY를 설정한 뒤 서버를 다시 시작하세요.";

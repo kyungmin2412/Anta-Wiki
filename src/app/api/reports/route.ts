@@ -2,7 +2,13 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { AnalysisError, MODEL, credentialsAvailable, extractReport } from "@/lib/claude";
+import {
+  AnalysisError,
+  credentialsAvailable,
+  currentModel,
+  extractReport,
+  noCredentialsMessage,
+} from "@/lib/ai";
 import { REPORT_FILE_DIR } from "@/lib/db";
 import { sanitizeExtraction } from "@/lib/normalize";
 import { findReportByHash, saveExtraction } from "@/lib/queries";
@@ -17,13 +23,7 @@ const MAX_BYTES = 32 * 1024 * 1024; // Claude 문서 입력 상한
 /** 리포트 PDF 한 건을 받아 분석하고 저장한다. 여러 건은 클라이언트가 순차 호출한다. */
 export async function POST(req: Request) {
   if (!credentialsAvailable()) {
-    return NextResponse.json(
-      {
-        error:
-          "Claude API 자격 증명이 없습니다. ANTHROPIC_API_KEY를 설정한 뒤 서버를 다시 시작하세요.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: noCredentialsMessage() }, { status: 503 });
   }
 
   let form: FormData;
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     fileName: file.name,
     fileHash: hash,
     storedFile,
-    model: MODEL,
+    model: currentModel(),
   });
 
   return NextResponse.json({

@@ -1,12 +1,13 @@
 import NoCredentialsNotice from "@/components/NoCredentialsNotice";
 import UploadClient from "@/components/UploadClient";
-import { credentialsAvailable } from "@/lib/claude";
+import { credentialsAvailable, resolveProvider } from "@/lib/ai";
 
 export const metadata = { title: "리포트 업로드 · ANTA WIKI" };
 export const dynamic = "force-dynamic";
 
 export default function UploadPage() {
   const ready = credentialsAvailable();
+  const provider = resolveProvider();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -21,7 +22,7 @@ export default function UploadPage() {
         </p>
       </header>
 
-      {!ready && <NoCredentialsNotice />}
+      {!ready && <NoCredentialsNotice provider={provider} />}
       <UploadClient disabled={!ready} />
     </div>
   );

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check": "tsx --conditions=react-server scripts/dev/check-pipeline.mjs",
+    "check": "tsx --conditions=react-server scripts/dev/check-pipeline.mjs && tsx --conditions=react-server scripts/dev/check-provider.mjs",
     "ingest": "tsx --conditions=react-server scripts/ingest.mjs",
     "seed:demo": "node scripts/seed-demo.mjs --reset",
     "shots": "node scripts/dev/shoot.mjs",
@@ -19,6 +19,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
     "next": "16.3.2",
+    "openai": "^7.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
