@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+import fs from "node:fs";
+fs.mkdirSync("shots", { recursive: true });
+const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const scheme = process.argv[3] ?? "light";
+const ctx = await b.newContext({ viewport: { width: 1180, height: 900 }, colorScheme: scheme, deviceScaleFactor: 2 });
+const p = await ctx.newPage();
+await p.goto("http://localhost:3111" + (process.argv[2] ?? "/companies/1"), { waitUntil: "networkidle" });
+await p.waitForTimeout(1500);
+const sel = process.argv[4] ?? "section#논조 > div:first-child";
+const el = await p.locator(sel).first();
+await el.screenshot({ path: `shots/crop-${scheme}.png` });
+await b.close();

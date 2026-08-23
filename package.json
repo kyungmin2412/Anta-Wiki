@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "tsx --conditions=react-server scripts/dev/check-pipeline.mjs",
+    "ingest": "tsx --conditions=react-server scripts/ingest.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs --reset",
+    "shots": "node scripts/dev/shoot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -28,6 +32,7 @@
     "eslint-config-next": "16.3.2",
     "playwright": "^1.62.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

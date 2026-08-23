@@ -2,7 +2,7 @@
 
 import SeriesLineChart, { type ChartRow } from "./SeriesLineChart";
 import { Card, CardHead, SeriesLegend } from "./ui";
-import { fmtCompact, fmtNumber } from "@/lib/format";
+import { fmtNumber } from "@/lib/format";
 import { SERIES_SLOTS } from "@/lib/palette";
 
 type Props = {
@@ -24,6 +24,7 @@ export default function TrendChartCard({
   colors,
   currency = "KRW",
 }: Props) {
+  const krw = currency === "KRW";
   const shown = analysts.slice(0, SERIES_SLOTS);
   const hidden = analysts.length - shown.length;
 
@@ -44,11 +45,15 @@ export default function TrendChartCard({
           seriesKeys={shown}
           colors={colors}
           formatValue={fmt}
-          formatTick={kind === "tone" ? (v) => `${v}` : (v) => fmtCompact(v)}
+          formatTick={
+            kind === "tone" ? (v) => `${v}` : (v) => fmtNumber(v / 1000, 0)
+          }
           height={300}
           zeroLine={kind === "tone"}
           yDomain={kind === "tone" ? [-100, 100] : undefined}
-          axisLabel={kind === "tone" ? "논조 점수" : currency}
+          axisLabel={
+            kind === "tone" ? "점수 (-100 ~ +100)" : krw ? "천원" : currency
+          }
           consensusLabel={kind === "tone" ? "평균 논조" : "평균 목표주가"}
         />
       </div>

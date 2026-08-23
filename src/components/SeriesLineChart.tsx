@@ -28,8 +28,8 @@ type Props = {
   height?: number;
   zeroLine?: boolean;
   yDomain?: [number | "auto", number | "auto"];
-  /** 값 축 이름 — 단위는 여기 한 번만 적고 눈금에는 반복하지 않는다. */
-  axisLabel?: string;
+  /** 값 축 단위 — 눈금에서 뺀 배율을 축 위에 한 번만 적는다. */
+  axisLabel?: string | null;
 };
 
 export default function SeriesLineChart({
@@ -60,7 +60,13 @@ export default function SeriesLineChart({
   }
 
   return (
-    <div className="w-full" style={{ height }}>
+    <div className="w-full">
+      {axisLabel && (
+        <div className="pl-4 text-[10.5px] font-medium text-ink-3">
+          단위: {axisLabel}
+        </div>
+      )}
+      <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={rows}
@@ -86,17 +92,6 @@ export default function SeriesLineChart({
             width={62}
             domain={yDomain ?? ["auto", "auto"]}
             tickFormatter={(v: number) => (formatTick ?? formatValue)(v)}
-            label={
-              axisLabel
-                ? {
-                    value: axisLabel,
-                    position: "insideTopLeft",
-                    offset: -6,
-                    fill: "var(--text-muted)",
-                    fontSize: 10,
-                  }
-                : undefined
-            }
           />
           {zeroLine && (
             <ReferenceLine y={0} stroke="var(--border-strong)" strokeWidth={1} />
@@ -155,9 +150,13 @@ export default function SeriesLineChart({
                       p.index === lastIndexOf.get(key) ? (
                         <text
                           key={`${key}-lbl`}
-                          x={Number(p.x ?? 0) + 8}
+                          x={Number(p.x ?? 0) + 9}
                           y={Number(p.y ?? 0) + 4}
                           fill={colors[key] ?? "var(--text-muted)"}
+                          stroke="var(--surface-1)"
+                          strokeWidth={3.5}
+                          paintOrder="stroke"
+                          strokeLinejoin="round"
                           fontSize={11}
                           fontWeight={600}
                         >
@@ -172,6 +171,7 @@ export default function SeriesLineChart({
           ))}
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

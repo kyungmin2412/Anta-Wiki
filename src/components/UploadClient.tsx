@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { Card } from "./ui";
 
-type Status = "대기" | "분석중" | "완료" | "중복" | "실패";
+type Status = "대기" | "분석중" | "완료" | "확인 필요" | "중복" | "실패";
 
 type Item = {
   id: string;
@@ -21,12 +21,17 @@ type Item = {
     title: string;
     toneScore: number;
     estimateCount: number;
+    pointCount: number;
+    factorCount: number;
+    warnings: string[];
   };
 };
 
 const STATUS_STYLE: Record<Status, string> = {
   대기: "border-line bg-surface-2 text-ink-3",
   분석중: "border-transparent bg-accent-soft text-accent",
+  "확인 필요":
+    "border-transparent bg-[color-mix(in_srgb,var(--warning)_22%,transparent)] text-[var(--serious)]",
   완료: "border-transparent bg-[color-mix(in_srgb,var(--good)_16%,transparent)] text-[var(--good)]",
   중복: "border-transparent bg-[color-mix(in_srgb,var(--warning)_22%,transparent)] text-[var(--serious)]",
   실패: "border-transparent bg-[color-mix(in_srgb,var(--critical)_16%,transparent)] text-[var(--critical)]",
@@ -81,7 +86,10 @@ export default function UploadClient() {
         } else if (!res.ok) {
           patch(item.id, { status: "실패", message: json.error ?? "분석 실패" });
         } else {
-          patch(item.id, { status: "완료", result: json });
+          patch(item.id, {
+            status: json.warnings?.length ? "확인 필요" : "완료",
+            result: json,
+          });
         }
       } catch (err) {
         patch(item.id, {
@@ -198,7 +206,7 @@ export default function UploadClient() {
                   </span>
                 </div>
 
-                {it.status === "완료" && it.result && (
+                {(it.status === "완료" || it.status === "확인 필요") && it.result && (
                   <div className="mt-2.5 rounded-lg bg-surface-2 px-3.5 py-2.5">
                     <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[12.5px]">
                       <Link
@@ -219,8 +227,23 @@ export default function UploadClient() {
                     </p>
                     <p className="tnum mt-1 text-[11.5px] text-ink-3">
                       논조 {it.result.toneScore > 0 ? "+" : ""}
-                      {it.result.toneScore} · 추정치 {it.result.estimateCount}건 추출
+                      {it.result.toneScore} · 추정치 {it.result.estimateCount}건 · 투자포인트{" "}
+                      {it.result.pointCount}개 · 팩터 {it.result.factorCount}개
                     </p>
+
+                    {it.result.warnings?.length > 0 && (
+                      <ul className="mt-2.5 space-y-1 border-t border-line pt-2.5">
+                        {it.result.warnings.map((w, i) => (
+                          <li
+                            key={i}
+                            className="flex gap-2 text-[11.5px] leading-relaxed text-[var(--serious)]"
+                          >
+                            <span aria-hidden>▲</span>
+                            {w}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 

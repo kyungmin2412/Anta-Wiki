@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { getDb } from "./db";
+import { companyMatchKey } from "./normalize";
 import type { ReportExtraction, Synthesis } from "./schema";
 import type {
   Analyst,
@@ -130,9 +131,16 @@ function upsertCompany(x: ReportExtraction): number {
       .get(ticker) as { id: number } | undefined;
     if (hit) return hit.id;
   }
-  const byName = db
-    .prepare(`SELECT id, ticker FROM companies WHERE name = ?`)
-    .get(x.company_name) as { id: number; ticker: string | null } | undefined;
+  // 종목코드가 없으면 이름으로 찾되, 표기 흔들림("SK하이닉스" / "SK 하이닉스")은 무시한다.
+  const key = companyMatchKey(x.company_name);
+  const byName = (
+    db.prepare(`SELECT id, name, ticker FROM companies`).all() as {
+      id: number;
+      name: string;
+      ticker: string | null;
+    }[]
+  ).find((c) => companyMatchKey(c.name) === key);
+
   if (byName) {
     // 종목코드가 나중에 확인된 경우 채워 넣는다.
     if (ticker && !byName.ticker) {

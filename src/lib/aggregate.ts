@@ -33,6 +33,17 @@ export function stableAnalysts(reports: FullReport[]): AnalystKey[] {
     .map(([k]) => k);
 }
 
+/**
+ * 같은 (지표 × 결산기)인데 리포트마다 단위가 다르면 한 축에 겹쳐 그릴 수 없다
+ * (억원과 조원을 같은 y축에 올리면 조용히 1만 배 틀린 그래프가 된다).
+ * 가장 많이 쓰인 단위를 기준으로 삼고 나머지는 제외한다.
+ */
+function modalUnit(units: Unit[]): Unit {
+  const count = new Map<Unit, number>();
+  for (const u of units) count.set(u, (count.get(u) ?? 0) + 1);
+  return [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
 /* ----------------------------- 논조 시계열 ----------------------------- */
 
 export type TonePoint = {
@@ -91,7 +102,7 @@ export type EstimateTrack = {
 export function listEstimateTracks(reports: FullReport[]): EstimateTrack[] {
   const acc = new Map<
     string,
-    EstimateTrack & { analystSet: Set<string> }
+    EstimateTrack & { analystSet: Set<string>; units: Unit[] }
   >();
   for (const r of reports) {
     for (const e of r.estimates) {
@@ -107,14 +118,16 @@ export function listEstimateTracks(reports: FullReport[]): EstimateTrack[] {
           coverage: 0,
           analysts: 0,
           analystSet: new Set<string>(),
+          units: [] as Unit[],
         };
       cur.coverage += 1;
       cur.analystSet.add(analystKey(r));
+      cur.units.push(e.unit);
       acc.set(id, cur);
     }
   }
   return [...acc.values()]
-    .map((t) => ({ ...t, analysts: t.analystSet.size }))
+    .map((t) => ({ ...t, unit: modalUnit(t.units), analysts: t.analystSet.size }))
     .sort(
       (a, b) =>
         b.coverage - a.coverage ||
@@ -147,16 +160,24 @@ export function buildEstimateSeries(
   metric: Metric,
   period: string,
 ): EstimateSeries {
-  const pick = (r: FullReport) =>
+  const match = (r: FullReport) =>
     r.estimates.find(
       (e) => e.metric === metric && periodKey(e.fiscal_year, e.fiscal_quarter) === period,
     );
 
-  const relevant = reports.filter((r) => pick(r));
+  const candidates = reports.filter((r) => match(r));
+  if (candidates.length === 0) return { rows: [], unit: null, analysts: [] };
+
+  const unit = modalUnit(candidates.map((r) => match(r)!.unit));
+  const pick = (r: FullReport) => {
+    const e = match(r);
+    return e && e.unit === unit ? e : undefined;
+  };
+
+  const relevant = candidates.filter((r) => pick(r));
   if (relevant.length === 0) return { rows: [], unit: null, analysts: [] };
 
   const analysts = stableAnalysts(relevant);
-  const unit = pick(relevant[0])!.unit;
   const dates = [...new Set(relevant.map((r) => r.published_at))].sort();
   const latest = new Map<AnalystKey, number>();
 
@@ -239,7 +260,8 @@ export function buildAnalystRevisions(
           e: r.estimates.find(
             (e) =>
               e.metric === t.metric &&
-              periodKey(e.fiscal_year, e.fiscal_quarter) === t.period,
+              periodKey(e.fiscal_year, e.fiscal_quarter) === t.period &&
+              e.unit === t.unit,
           ),
         }))
         .filter((x) => x.e)

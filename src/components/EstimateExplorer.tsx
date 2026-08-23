@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import SeriesLineChart, { type ChartRow } from "./SeriesLineChart";
 import { Badge, Card, CardHead, Delta, SeriesLegend, TableScroll } from "./ui";
 import { HIGHER_IS_BETTER, METRIC_LABEL, type Metric, type Unit } from "@/lib/domain";
-import { fmtCompact, fmtWithUnit } from "@/lib/format";
+import { axisUnitLabel, fmtWithUnit, makeTickFormatter } from "@/lib/format";
 import { SERIES_SLOTS } from "@/lib/palette";
 
 export type TrackMeta = {
@@ -58,8 +58,17 @@ export default function EstimateExplorer({ tracks, data, colors }: Props) {
 
   const unit = track?.unit ?? active?.unit ?? null;
   const fmt = (v: number) => fmtWithUnit(v, unit);
-  const tick = (v: number) =>
-    unit === "%" || unit === "배" ? `${Math.round(v * 10) / 10}` : fmtCompact(v);
+
+  // 눈금 자릿수는 이 트랙의 실제 값 폭에서 정해야 한다 — 아니면 서로 다른 눈금이 같은 글자로 찍힌다.
+  const plotted = useMemo(() => {
+    if (!track) return [];
+    const out: number[] = [];
+    for (const row of track.rows) {
+      for (const v of Object.values(row)) if (typeof v === "number") out.push(v);
+    }
+    return out;
+  }, [track]);
+  const tick = useMemo(() => makeTickFormatter(plotted, unit), [plotted, unit]);
 
   // 표는 색 대비가 낮은 라이트 모드에서 '색 없이도 읽히는' 대체 경로다.
   const summary = useMemo(() => {
@@ -144,7 +153,7 @@ export default function EstimateExplorer({ tracks, data, colors }: Props) {
           formatValue={fmt}
           formatTick={tick}
           height={320}
-          axisLabel={unit ?? undefined}
+          axisLabel={axisUnitLabel(plotted, unit)}
         />
       </div>
 

@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 로컬 데이터 (SQLite DB, 업로드된 리포트 PDF)
 /data
+
+# 개발용 스크린샷
+/shots

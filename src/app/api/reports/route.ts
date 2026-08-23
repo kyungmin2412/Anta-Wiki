@@ -2,8 +2,9 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { AnalysisError, MODEL, extractReport } from "@/lib/claude";
+import { AnalysisError, MODEL, credentialsAvailable, extractReport } from "@/lib/claude";
 import { REPORT_FILE_DIR } from "@/lib/db";
+import { sanitizeExtraction } from "@/lib/normalize";
 import { findReportByHash, saveExtraction } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -15,6 +16,16 @@ const MAX_BYTES = 32 * 1024 * 1024; // Claude 문서 입력 상한
 
 /** 리포트 PDF 한 건을 받아 분석하고 저장한다. 여러 건은 클라이언트가 순차 호출한다. */
 export async function POST(req: Request) {
+  if (!credentialsAvailable()) {
+    return NextResponse.json(
+      {
+        error:
+          "Claude API 자격 증명이 없습니다. ANTHROPIC_API_KEY를 설정한 뒤 서버를 다시 시작하세요.",
+      },
+      { status: 503 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -67,11 +78,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
+  // 스키마는 지켰어도 내용이 정합하다는 보장은 없다 — 정리하고, 사람이 볼 것은 경고로 남긴다.
+  const { value: clean, warnings } = sanitizeExtraction(extraction, {
+    fallbackDate: new Date().toISOString().slice(0, 10),
+  });
+
   const storedFile = `${hash.slice(0, 16)}.pdf`;
   await fs.mkdir(REPORT_FILE_DIR, { recursive: true });
   await fs.writeFile(path.join(REPORT_FILE_DIR, storedFile), buf);
 
-  const { reportId, companyId } = saveExtraction(extraction, {
+  const { reportId, companyId } = saveExtraction(clean, {
     fileName: file.name,
     fileHash: hash,
     storedFile,
@@ -81,12 +97,15 @@ export async function POST(req: Request) {
   return NextResponse.json({
     reportId,
     companyId,
-    company: extraction.company_name,
-    analyst: extraction.analyst_name,
-    brokerage: extraction.brokerage,
-    publishedAt: extraction.published_at,
-    title: extraction.title,
-    toneScore: extraction.tone_score,
-    estimateCount: extraction.estimates.length,
+    company: clean.company_name,
+    analyst: clean.analyst_name,
+    brokerage: clean.brokerage,
+    publishedAt: clean.published_at,
+    title: clean.title,
+    toneScore: clean.tone_score,
+    estimateCount: clean.estimates.length,
+    pointCount: clean.investment_points.length,
+    factorCount: clean.factors.length,
+    warnings,
   });
 }
