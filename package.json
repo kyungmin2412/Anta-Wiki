@@ -10,7 +10,10 @@
     "check": "tsx --conditions=react-server scripts/dev/check-pipeline.mjs",
     "ingest": "tsx --conditions=react-server scripts/ingest.mjs",
     "seed:demo": "node scripts/seed-demo.mjs --reset",
-    "shots": "node scripts/dev/shoot.mjs"
+    "shots": "node scripts/dev/shoot.mjs",
+    "contract": "tsx --conditions=react-server scripts/contract.mjs",
+    "import": "tsx --conditions=react-server scripts/import.mjs",
+    "synthesis-input": "tsx --conditions=react-server scripts/synthesis-input.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

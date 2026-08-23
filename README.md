@@ -18,28 +18,62 @@
 - **종합 분석** — 리포트 전체를 가로질러 논조 변곡점, 투자포인트 테마의 부상/지속/약화/소멸,
   팩터 서술 변화, 의견이 갈리는 쟁점을 해석 (버튼으로 명시 생성, 리포트 추가 시 자동 무효화)
 
+## 리포트를 넣는 두 가지 경로
+
+PDF를 읽고 논조를 판단하는 일에는 AI 모델이 필요하다. 그 외 — 차트, 시계열 집계,
+애널리스트별 리비전, 컨센서스 계산 — 은 전부 로컬 코드라 모델과 무관하다.
+
+| | Claude Code 경로 | API 경로 |
+|---|---|---|
+| 비용 | **Claude 구독에 포함** (추가 결제 없음) | 종량제, 리포트당 약 $0.35 |
+| 필요한 것 | Claude Code | `ANTHROPIC_API_KEY` |
+| 넣는 방법 | Claude Code에게 "이 리포트들 위키에 넣어줘" | 브라우저에서 `/upload`에 드래그 |
+| 자동화 | 사람이 세션을 열어야 함 | 스크립트로 무인 실행 가능 |
+
+같은 지침과 같은 스키마를 쓰므로 결과 품질은 동일하다. 둘 다 켜두고 상황에 따라 쓰면 된다.
+
+### Claude Code 경로 (추가 비용 없음)
+
+프로젝트 폴더에서 Claude Code를 열고 리포트를 넣어달라고 하면 된다.
+`.claude/skills/report-ingest`가 PDF 읽기 → 검증 → 적재까지의 절차를 담고 있다.
+
+```
+> ./reports 폴더의 증권사 리포트들을 위키에 넣어줘
+> 삼성전자 종합 분석 만들어줘
+```
+
+내부적으로는 이 명령들을 쓴다. 손으로 돌려도 된다:
+
+```bash
+npm run contract                          # 추출 지침 + JSON 스키마 (코드에서 생성됨)
+npm run import -- ext.json --pdf r.pdf    # 추출 결과 검증 후 적재
+npm run synthesis-input -- 1              # 종합 분석에 넣을 입력 데이터
+npm run import -- synth.json --synthesis 1
+```
+
+`import`는 zod로 검증하므로 스키마에 어긋나면 **어느 필드가 왜 틀렸는지 찍고 아무것도 저장하지 않는다.**
+
+### API 경로 (종량제)
+
+```bash
+export ANTHROPIC_API_KEY=...
+npm run dev                               # /upload 에 PDF 드래그
+npm run ingest -- ./리포트폴더             # 폴더째 일괄 분석
+```
+
+키가 없으면 PDF를 읽기 전에 안내 메시지로 막힌다. 비용이 부담되면 `ANTA_MODEL=claude-sonnet-5`로
+낮출 수 있으나, 논조 판정은 Opus가 확실히 낫다.
+
 ## 실행
 
 ```bash
 npm install
-export ANTHROPIC_API_KEY=...      # 없으면 업로드 시 바로 안내 메시지가 뜬다
 npm run dev                        # http://localhost:3000
-```
-
-리포트를 여러 건 넣을 때는 브라우저보다 CLI가 편하다:
-
-```bash
-npm run ingest -- ./내리포트폴더        # 폴더 안 PDF를 순차 분석해 적재
-npm run ingest -- ./내리포트폴더 --dry  # 어떤 파일이 잡히는지만 확인
-```
-
-데모 데이터로 화면만 확인하려면:
-
-```bash
-npm run seed:demo                  # 삼성전자 · 리포트 8건 · 애널리스트 4명
+npm run seed:demo                  # 데모 데이터 (삼성전자 · 리포트 8건 · 애널리스트 4명)
 ```
 
 데이터는 `data/anta-wiki.db`(SQLite)와 `data/reports/`(원본 PDF)에 저장되며 git에 올라가지 않는다.
+한 번 분석한 리포트는 DB에 남으므로, 이후 열람은 몇 번을 해도 비용이 들지 않는다.
 
 ### 검증
 
@@ -55,7 +89,9 @@ npm run lint
 |---|---|
 | `src/lib/db-schema.ts`, `src/lib/db.ts` | SQLite 스키마와 연결 |
 | `src/lib/schema.ts` | 리포트 추출 / 종합 분석 zod 스키마 (= 모델 출력 계약) |
-| `src/lib/claude.ts` | Claude 호출 (PDF 문서 입력 + structured outputs) |
+| `src/lib/prompts.ts` | 추출·종합 지침 — 두 경로가 공유하는 단일 출처 |
+| `src/lib/claude.ts` | API 경로의 Claude 호출 (PDF 문서 입력 + structured outputs) |
+| `.claude/skills/report-ingest/` | Claude Code 경로의 절차 |
 | `src/lib/aggregate.ts` | 논조·목표주가·추정치 시계열, 애널리스트별 리비전, 팩터 롤업 |
 | `src/lib/queries.ts` | 저장·조회, 종합 분석 캐시 |
 | `src/components/` | 차트·표·카드 |
@@ -79,7 +115,7 @@ npm run lint
 ## 이어서 할 일
 
 - [ ] **실제 증권사 리포트 PDF로 추출 품질 검증** — 특히 추정 테이블 파싱과 단위 환산.
-      이 세션에는 API 키가 없어 모델 호출 경로만 미검증 상태다
+      적재 경로는 손으로 만든 추출 결과로 검증했으나, 모델이 실제 PDF의 표를 제대로 읽는지는 아직 확인 전
 - [ ] 기업 수동 병합/이름 정정 UI — 자동 병합이 놓친 경우를 사람이 고칠 수 있게
 - [ ] 분기 추정치 화면 (스키마·추출은 이미 지원, 탐색기 기본 노출은 연간 위주)
 - [ ] 이후 위키 기능: 재무제표, 산업 분석, 경쟁사 비교
