@@ -2,7 +2,7 @@
  * 개발용 데모 데이터. 실제 리포트 없이 화면과 집계 로직을 확인하기 위한 것.
  *   node scripts/seed-demo.mjs [--reset]
  */
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { SCHEMA } from "../src/lib/db-schema.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +16,7 @@ if (process.argv.includes("--reset") && fs.existsSync(dbPath)) {
   }
 }
 
-const db = new Database(dbPath);
+const db = new DatabaseSync(dbPath);
 db.exec(SCHEMA);
 
 const COMPANY = { ticker: "005930", name: "삼성전자", market: "KOSPI", sector: "반도체" };
@@ -209,7 +209,7 @@ const insAnalyst = db.prepare(
   `INSERT INTO analysts (name, brokerage) VALUES (?,?)`,
 );
 
-db.transaction(() => {
+function run() {
   db.exec("DELETE FROM companies; DELETE FROM analysts;");
   const companyId = Number(
     insCompany.run(COMPANY.ticker, COMPANY.name, COMPANY.market, COMPANY.sector)
@@ -264,4 +264,13 @@ db.transaction(() => {
   });
 
   console.log(`✓ ${COMPANY.name} · 리포트 ${REPORTS.length}건 · 애널리스트 ${ANALYSTS.length}명`);
-})();
+}
+
+db.exec("BEGIN");
+try {
+  run();
+  db.exec("COMMIT");
+} catch (err) {
+  db.exec("ROLLBACK");
+  throw err;
+}

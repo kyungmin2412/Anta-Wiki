@@ -66,6 +66,9 @@ npm run ingest -- ./리포트폴더             # 폴더째 일괄 분석
 
 ## 실행
 
+**Node.js 22.5 이상이 필요합니다.** SQLite는 Node에 내장된 것을 쓰므로 네이티브 모듈 컴파일이 필요 없다 —
+윈도우에서 Visual Studio 빌드 도구를 설치하지 않아도 된다는 뜻이다.
+
 터미널이 낯설다면 **[처음 시작하기](처음%20시작하기.md)** 를 보세요.
 `위키 실행하기.command`(맥) / `위키 실행하기.bat`(윈도우)을 두 번 누르면 켜집니다.
 
@@ -90,7 +93,7 @@ npm run lint
 
 | 경로 | 역할 |
 |---|---|
-| `src/lib/db-schema.ts`, `src/lib/db.ts` | SQLite 스키마와 연결 |
+| `src/lib/db-schema.ts`, `src/lib/db.ts` | SQLite 스키마와 연결 (Node 내장 `node:sqlite` — 네이티브 빌드 없음) |
 | `src/lib/schema.ts` | 리포트 추출 / 종합 분석 zod 스키마 (= 모델 출력 계약) |
 | `src/lib/prompts.ts` | 추출·종합 지침 — 두 경로가 공유하는 단일 출처 |
 | `src/lib/claude.ts` | API 경로의 Claude 호출 (PDF 문서 입력 + structured outputs) |

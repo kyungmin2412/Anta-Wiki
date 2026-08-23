@@ -7,6 +7,18 @@ echo "  ANTA WIKI 를 켜는 중입니다"
 echo "  ─────────────────────────────────────────"
 echo ""
 
+if [ ! -f package.json ]; then
+  echo "  ✗ 위키 파일을 찾을 수 없습니다."
+  echo ""
+  echo "    압축을 풀지 않고 zip 안에서 바로 실행하면 이렇게 됩니다."
+  echo "    zip 파일의 압축을 먼저 푼 뒤, 그 폴더 안의 이 파일을 실행하세요."
+  echo ""
+  echo "    지금 위치: $(pwd)"
+  echo ""
+  read -r -p "  엔터를 누르면 창이 닫힙니다..."
+  exit 1
+fi
+
 if ! command -v node > /dev/null 2>&1; then
   echo "  ✗ Node.js 가 설치되어 있지 않습니다."
   echo ""
@@ -19,8 +31,8 @@ if ! command -v node > /dev/null 2>&1; then
 fi
 
 MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
-if [ "$MAJOR" -lt 20 ]; then
-  echo "  ✗ Node.js 버전이 낮습니다 (현재 $(node -v), 20 이상 필요)"
+if [ "$MAJOR" -lt 22 ]; then
+  echo "  ✗ Node.js 버전이 낮습니다 (현재 $(node -v), 22 이상 필요)"
   echo ""
   echo "    https://nodejs.org 에서 'LTS' 버튼을 눌러 최신 버전을 설치한 뒤"
   echo "    이 파일을 다시 더블클릭하세요."
@@ -29,16 +41,24 @@ if [ "$MAJOR" -lt 20 ]; then
   exit 1
 fi
 
+# SQLite는 Node에 내장된 것을 쓴다. 실험 기능 경고가 사용자 화면을 어지럽히지 않게 끈다.
+export NODE_OPTIONS="--disable-warning=ExperimentalWarning"
+
 if [ ! -d node_modules ]; then
   echo "  처음 실행이라 준비 작업을 합니다. 2~3분 걸립니다."
   echo "  글자가 빠르게 올라가도 정상입니다. 기다려 주세요."
   echo ""
-  npm install || {
+  npm install 2>&1 | tee 설치기록.log
+  if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     echo ""
-    echo "  ✗ 준비 작업에 실패했습니다. 인터넷 연결을 확인해 주세요."
+    echo "  ✗ 준비 작업에 실패했습니다."
+    echo ""
+    echo "    원인은 이 폴더에 생긴 '설치기록.log' 파일에 적혀 있습니다."
+    echo "    그 파일을 그대로 보내주시면 원인을 알려드리겠습니다."
+    echo ""
     read -r -p "  엔터를 누르면 창이 닫힙니다..."
     exit 1
-  }
+  fi
   echo ""
 fi
 
