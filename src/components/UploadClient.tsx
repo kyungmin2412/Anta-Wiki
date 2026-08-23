@@ -37,7 +37,7 @@ const STATUS_STYLE: Record<Status, string> = {
   실패: "border-transparent bg-[color-mix(in_srgb,var(--critical)_16%,transparent)] text-[var(--critical)]",
 };
 
-export default function UploadClient() {
+export default function UploadClient({ disabled = false }: { disabled?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -45,6 +45,7 @@ export default function UploadClient() {
   const router = useRouter();
 
   const addFiles = useCallback((files: FileList | File[]) => {
+    if (disabled) return;
     const pdfs = Array.from(files).filter(
       (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
     );
@@ -57,7 +58,7 @@ export default function UploadClient() {
         status: "대기" as Status,
       })),
     ]);
-  }, []);
+  }, [disabled]);
 
   const patch = useCallback((id: string, next: Partial<Item>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...next } : it)));
@@ -109,7 +110,9 @@ export default function UploadClient() {
   return (
     <div className="space-y-4">
       <div
+        aria-disabled={disabled}
         onDragOver={(e) => {
+          if (disabled) return;
           e.preventDefault();
           setDragging(true);
         }}
@@ -120,21 +123,26 @@ export default function UploadClient() {
           addFiles(e.dataTransfer.files);
         }}
         className={`rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors ${
-          dragging
-            ? "border-accent bg-accent-soft"
-            : "border-line-strong bg-surface-1"
+          disabled
+            ? "border-line bg-surface-1 opacity-50"
+            : dragging
+              ? "border-accent bg-accent-soft"
+              : "border-line-strong bg-surface-1"
         }`}
       >
         <p className="text-[14px] font-semibold text-ink">
-          PDF를 이 영역에 끌어다 놓으세요
+          {disabled ? "지금은 이 방법을 쓸 수 없습니다" : "PDF를 이 영역에 끌어다 놓으세요"}
         </p>
         <p className="mx-auto mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-ink-3">
-          여러 증권사 리포트를 한 번에 올려도 됩니다. 파일당 최대 32MB.
+          {disabled
+            ? "위 안내의 두 방법 중 하나를 먼저 설정하세요."
+            : "여러 증권사 리포트를 한 번에 올려도 됩니다. 파일당 최대 32MB."}
         </p>
         <button
           type="button"
+          disabled={disabled}
           onClick={() => inputRef.current?.click()}
-          className="mt-4 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+          className="mt-4 rounded-lg border border-line-strong bg-surface-1 px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-line-strong disabled:hover:text-ink"
         >
           파일 선택
         </button>

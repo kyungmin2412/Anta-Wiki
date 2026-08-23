@@ -45,3 +45,10 @@ next-env.d.ts
 
 # 개발용 스크린샷
 /shots
+
+# 사용자가 넣는 리포트 PDF (원본은 저작권이 있으므로 저장소에 올리지 않는다)
+/reports/*
+!/reports/.gitkeep
+
+# 설치 실패 기록
+설치기록.log

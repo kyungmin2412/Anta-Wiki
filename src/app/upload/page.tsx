@@ -1,8 +1,13 @@
+import NoCredentialsNotice from "@/components/NoCredentialsNotice";
 import UploadClient from "@/components/UploadClient";
+import { credentialsAvailable } from "@/lib/claude";
 
 export const metadata = { title: "리포트 업로드 · ANTA WIKI" };
+export const dynamic = "force-dynamic";
 
 export default function UploadPage() {
+  const ready = credentialsAvailable();
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
@@ -15,7 +20,9 @@ export default function UploadPage() {
           올려도 기업 단위로 자동 병합된다.
         </p>
       </header>
-      <UploadClient />
+
+      {!ready && <NoCredentialsNotice />}
+      <UploadClient disabled={!ready} />
     </div>
   );
 }
